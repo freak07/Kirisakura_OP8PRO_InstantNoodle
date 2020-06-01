@@ -36,7 +36,7 @@ static u32 fw_version_ext;
 #define CNSS_EVENT_PENDING		2989
 #define COLD_BOOT_CAL_SHUTDOWN_DELAY_MS	50
 
-#define CNSS_QUIRKS_DEFAULT		BIT(DISABLE_IO_COHERENCY)
+#define CNSS_QUIRKS_DEFAULT		0
 #ifdef CONFIG_CNSS_EMULATION
 #define CNSS_MHI_TIMEOUT_DEFAULT	90000
 #else
@@ -585,8 +585,10 @@ int cnss_driver_event_post(struct cnss_plat_data *plat_priv,
 	if (!(flags & CNSS_EVENT_SYNC))
 		goto out;
 
-	if (flags & CNSS_EVENT_UNINTERRUPTIBLE)
+	if (flags & CNSS_EVENT_UNKILLABLE)
 		wait_for_completion(&event->complete);
+	else if (flags & CNSS_EVENT_UNINTERRUPTIBLE)
+		ret = wait_for_completion_killable(&event->complete);
 	else
 		ret = wait_for_completion_interruptible(&event->complete);
 
@@ -1049,6 +1051,10 @@ static int cnss_do_recovery(struct cnss_plat_data *plat_priv,
 
 	switch (reason) {
 	case CNSS_REASON_LINK_DOWN:
+		if (!cnss_bus_check_link_status(plat_priv)) {
+			cnss_pr_dbg("Skip link down recovery as link is already up\n");
+			return 0;
+		}
 		if (test_bit(LINK_DOWN_SELF_RECOVERY,
 			     &plat_priv->ctrl_params.quirks))
 			goto self_recovery;
@@ -2000,6 +2006,7 @@ static ssize_t shutdown_store(struct kobject *kobj,
 		set_bit(CNSS_IN_REBOOT, &plat_priv->driver_state);
 		del_timer(&plat_priv->fw_boot_timer);
 		complete_all(&plat_priv->power_up_complete);
+		complete_all(&plat_priv->cal_complete);
 	}
 
 	cnss_pr_dbg("Received shutdown notification\n");
@@ -2139,6 +2146,9 @@ static int cnss_reboot_notifier(struct notifier_block *nb,
 		container_of(nb, struct cnss_plat_data, reboot_nb);
 
 	set_bit(CNSS_IN_REBOOT, &plat_priv->driver_state);
+	del_timer(&plat_priv->fw_boot_timer);
+	complete_all(&plat_priv->power_up_complete);
+	complete_all(&plat_priv->cal_complete);
 	cnss_pr_dbg("Reboot is in progress with action %d\n", action);
 
 	return NOTIFY_DONE;
@@ -2202,7 +2212,6 @@ static void cnss_init_control_params(struct cnss_plat_data *plat_priv)
 }
 
 static void cnss_get_wlaon_pwr_ctrl_info(struct cnss_plat_data *plat_priv)
-
 {
 	struct device *dev = &plat_priv->plat_dev->dev;
 

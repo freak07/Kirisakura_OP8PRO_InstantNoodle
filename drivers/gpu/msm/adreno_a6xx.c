@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/firmware.h>
@@ -446,8 +446,8 @@ static void a6xx_start(struct adreno_device *adreno_dev)
 	kgsl_regwrite(device, A6XX_UCHE_FILTER_CNTL, 0x804);
 	kgsl_regwrite(device, A6XX_UCHE_CACHE_WAYS, 0x4);
 
-	/* ROQ sizes are twice as big on a640/a680 than on a630 */
-	if (ADRENO_GPUREV(adreno_dev) >= ADRENO_REV_A640) {
+	if (adreno_is_a640_family(adreno_dev) ||
+		adreno_is_a650_family(adreno_dev)) {
 		kgsl_regwrite(device, A6XX_CP_ROQ_THRESHOLDS_2, 0x02000140);
 		kgsl_regwrite(device, A6XX_CP_ROQ_THRESHOLDS_1, 0x8040362C);
 	} else if (adreno_is_a612(adreno_dev) || adreno_is_a610(adreno_dev)) {
@@ -1103,8 +1103,7 @@ static int64_t a6xx_read_throttling_counters(struct adreno_device *adreno_dev)
 static int a6xx_reset(struct kgsl_device *device, int fault)
 {
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
-	int ret = -EINVAL;
-	int i = 0;
+	int ret;
 
 	/* Use the regular reset sequence for No GMU */
 	if (!gmu_core_isenabled(device))
@@ -1116,33 +1115,20 @@ static int a6xx_reset(struct kgsl_device *device, int fault)
 	/* since device is officially off now clear start bit */
 	clear_bit(ADRENO_DEVICE_STARTED, &adreno_dev->priv);
 
-	/* Keep trying to start the device until it works */
-	for (i = 0; i < NUM_TIMES_RESET_RETRY; i++) {
-		ret = adreno_start(device, 0);
-		if (!ret)
-			break;
-
-		msleep(20);
-	}
-
+	ret = adreno_start(device, 0);
 	if (ret)
 		return ret;
 
-	if (i != 0)
-		dev_warn(device->dev,
-			      "Device hard reset tried %d tries\n", i);
+	kgsl_pwrctrl_change_state(device, KGSL_STATE_ACTIVE);
 
 	/*
-	 * If active_cnt is non-zero then the system was active before
-	 * going into a reset - put it back in that state
+	 * If active_cnt is zero, there is no need to keep the GPU active. So,
+	 * we should transition to SLUMBER.
 	 */
+	if (!atomic_read(&device->active_cnt))
+		kgsl_pwrctrl_change_state(device, KGSL_STATE_SLUMBER);
 
-	if (atomic_read(&device->active_cnt))
-		kgsl_pwrctrl_change_state(device, KGSL_STATE_ACTIVE);
-	else
-		kgsl_pwrctrl_change_state(device, KGSL_STATE_NAP);
-
-	return ret;
+	return 0;
 }
 
 static void a6xx_cp_hw_err_callback(struct adreno_device *adreno_dev, int bit)
@@ -1313,11 +1299,19 @@ static const char *a6xx_fault_block_uche(struct kgsl_device *device,
 	unsigned int uche_client_id = 0;
 	static char str[40];
 
-	mutex_lock(&device->mutex);
+	/*
+	 * Smmu driver takes a vote on CX gdsc before calling the kgsl pagefault
+	 * handler. If there is contention for device mutex in this path and the
+	 * dispatcher fault handler is holding this lock, trying to turn off CX
+	 * gdsc will fail during the reset. So to avoid blocking here, try to
+	 * lock device mutex and return if it fails.
+	 */
+	if (!mutex_trylock(&device->mutex))
+		return "UCHE";
 
 	if (!kgsl_state_is_awake(device)) {
 		mutex_unlock(&device->mutex);
-		return "UCHE: unknown";
+		return "UCHE";
 	}
 
 	kgsl_regread(device, A6XX_UCHE_CLIENT_PF, &uche_client_id);
@@ -1325,7 +1319,7 @@ static const char *a6xx_fault_block_uche(struct kgsl_device *device,
 
 	/* Ignore the value if the gpu is in IFPC */
 	if (uche_client_id == SCOOBYDOO)
-		return "UCHE: unknown";
+		return "UCHE";
 
 	uche_client_id &= A6XX_UCHE_CLIENT_PF_CLIENT_ID_MASK;
 	snprintf(str, sizeof(str), "UCHE: %s",

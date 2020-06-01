@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/cpufreq.h>
@@ -430,7 +430,7 @@ static struct cpufreq_driver cpufreq_qcom_hw_driver = {
 static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 				    struct cpufreq_qcom *c)
 {
-	struct device *dev = &pdev->dev;
+	struct device *dev = &pdev->dev, *cpu_dev;
 	void __iomem *base_freq, *base_volt;
 	u32 data, src, lval, i, core_count, prev_cc, prev_freq, cur_freq, volt;
 	u32 vc;
@@ -464,8 +464,10 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 		dev_dbg(dev, "index=%d freq=%d, core_count %d\n",
 			i, c->table[i].frequency, core_count);
 
-		if (core_count != c->max_cores)
+		if (core_count != c->max_cores) {
 			cur_freq = CPUFREQ_ENTRY_INVALID;
+			c->table[i].flags = CPUFREQ_BOOST_FREQ;
+		}
 
 		/*
 		 * Two of the same frequencies with the same core counts means
@@ -482,9 +484,13 @@ static int qcom_cpufreq_hw_read_lut(struct platform_device *pdev,
 		prev_cc = core_count;
 		prev_freq = cur_freq;
 
-		cur_freq *= 1000;
-		for_each_cpu(cpu, &c->related_cpus)
-			dev_pm_opp_add(get_cpu_device(cpu), cur_freq, volt);
+		for_each_cpu(cpu, &c->related_cpus) {
+			cpu_dev = get_cpu_device(cpu);
+			if (!cpu_dev)
+				continue;
+			dev_pm_opp_add(cpu_dev, c->table[i].frequency * 1000,
+							volt);
+		}
 	}
 
 	c->table[i].frequency = CPUFREQ_TABLE_END;

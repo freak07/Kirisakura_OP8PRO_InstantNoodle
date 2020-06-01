@@ -646,6 +646,8 @@ static int set_format(struct snd_usb_substream *subs, struct audioformat *fmt)
 	return 0;
 }
 
+static int snd_usb_pcm_change_state(struct snd_usb_substream *subs, int state);
+
 int snd_usb_enable_audio_stream(struct snd_usb_substream *subs,
 	int datainterval, bool enable)
 {

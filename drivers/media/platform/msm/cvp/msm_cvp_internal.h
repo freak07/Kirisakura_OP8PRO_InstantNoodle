@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _MSM_CVP_INTERNAL_H_
@@ -284,7 +284,7 @@ struct cvp_session_event {
 
 struct msm_cvp_core {
 	struct list_head list;
-	struct mutex lock;
+	struct mutex lock, power_lock;
 	int id;
 	dev_t dev_num;
 	struct cdev cdev;

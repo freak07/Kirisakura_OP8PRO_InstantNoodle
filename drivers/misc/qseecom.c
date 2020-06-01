@@ -2,7 +2,7 @@
 /*
  * QTI Secure Execution Environment Communicator (QSEECOM) driver
  *
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt) "QSEECOM: %s: " fmt, __func__
@@ -190,6 +190,13 @@ struct sglist_info {
 
 #define MAKE_WHITELIST_VERSION(major, minor, patch) \
 	(((major & 0x3FF) << 22) | ((minor & 0x3FF) << 12) | (patch & 0xFFF))
+
+#define MAKE_NULL(sgt, attach, dmabuf) do {\
+				sgt = NULL;\
+				attach = NULL;\
+				dmabuf = NULL;\
+				} while (0)
+
 
 struct qseecom_registered_listener_list {
 	struct list_head                 list;
@@ -1422,6 +1429,7 @@ static int qseecom_vaddr_map(int ion_fd,
 err_unmap:
 	dma_buf_end_cpu_access(new_dma_buf, DMA_BIDIRECTIONAL);
 	qseecom_dmabuf_unmap(new_sgt, new_attach, new_dma_buf);
+	MAKE_NULL(*sgt, *attach, *dmabuf);
 err:
 	return ret;
 }
@@ -1496,9 +1504,11 @@ static int __qseecom_set_sb_memory(struct qseecom_registered_listener_list *svc,
 	}
 	return 0;
 err:
-	if (svc->dmabuf)
+	if (svc->dmabuf) {
 		qseecom_vaddr_unmap(svc->sb_virt, svc->sgt, svc->attach,
 			svc->dmabuf);
+		MAKE_NULL(svc->sgt, svc->attach, svc->dmabuf);
+	}
 	return ret;
 }
 
@@ -1624,9 +1634,11 @@ static int __qseecom_unregister_listener(struct qseecom_dev_handle *data,
 	}
 
 exit:
-	if (ptr_svc->dmabuf)
+	if (ptr_svc->dmabuf) {
 		qseecom_vaddr_unmap(ptr_svc->sb_virt,
 			ptr_svc->sgt, ptr_svc->attach, ptr_svc->dmabuf);
+		MAKE_NULL(ptr_svc->sgt, ptr_svc->attach, ptr_svc->dmabuf);
+	}
 	__qseecom_free_tzbuf(&ptr_svc->sglistinfo_shm);
 	list_del(&ptr_svc->list);
 	kzfree(ptr_svc);
@@ -2028,9 +2040,12 @@ static int qseecom_set_client_mem_param(struct qseecom_dev_handle *data,
 
 	return ret;
 exit:
-	if (data->client.dmabuf)
+	if (data->client.dmabuf) {
 		qseecom_vaddr_unmap(data->client.sb_virt, data->client.sgt,
 			 data->client.attach, data->client.dmabuf);
+		MAKE_NULL(data->client.sgt,
+			data->client.attach, data->client.dmabuf);
+	}
 	return ret;
 }
 
@@ -2237,10 +2252,6 @@ err_resp:
 				goto exit;
 			}
 
-			ret = qseecom_dmabuf_cache_operations(ptr_svc->dmabuf,
-						QSEECOM_CACHE_INVALIDATE);
-			if (ret)
-				goto exit;
 		} else {
 			ret = qseecom_scm_call(SCM_SVC_TZSCHEDULER, 1,
 					cmd_buf, cmd_len, resp, sizeof(*resp));
@@ -2572,10 +2583,6 @@ err_resp:
 					ret, data->client.app_id);
 				goto exit;
 			}
-			ret = qseecom_dmabuf_cache_operations(ptr_svc->dmabuf,
-						QSEECOM_CACHE_INVALIDATE);
-			if (ret)
-				goto exit;
 		} else {
 			ret = qseecom_scm_call(SCM_SVC_TZSCHEDULER, 1,
 					cmd_buf, cmd_len, resp, sizeof(*resp));
@@ -2972,8 +2979,10 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 
 loadapp_err:
 	__qseecom_disable_clk_scale_down(data);
-	if (dmabuf)
+	if (dmabuf) {
 		qseecom_vaddr_unmap(vaddr, sgt, attach, dmabuf);
+		MAKE_NULL(sgt, attach, dmabuf);
+	}
 enable_clk_err:
 	if (qseecom.support_bus_scaling) {
 		mutex_lock(&qsee_bw_mutex);
@@ -3117,9 +3126,12 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 	}
 
 unload_exit:
-	if (data->client.dmabuf)
+	if (data->client.dmabuf) {
 		qseecom_vaddr_unmap(data->client.sb_virt, data->client.sgt,
 			data->client.attach, data->client.dmabuf);
+		MAKE_NULL(data->client.sgt,
+			data->client.attach, data->client.dmabuf);
+	}
 	data->released = true;
 	return ret;
 }
@@ -3741,14 +3753,6 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 					ret, data->client.app_id);
 		goto exit;
 	}
-	if (data->client.dmabuf) {
-		ret = qseecom_dmabuf_cache_operations(data->client.dmabuf,
-					QSEECOM_CACHE_INVALIDATE);
-		if (ret) {
-			pr_err("cache operation failed %d\n", ret);
-			goto exit;
-		}
-	}
 
 	if (qseecom.qsee_reentrancy_support) {
 		ret = __qseecom_process_reentrancy(&resp, ptr_app, data);
@@ -3769,6 +3773,15 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 				ret = -EINVAL;
 				goto exit;
 			}
+		}
+	}
+
+	if (data->client.dmabuf) {
+		ret = qseecom_dmabuf_cache_operations(data->client.dmabuf,
+					QSEECOM_CACHE_INVALIDATE);
+		if (ret) {
+			pr_err("cache operation failed %d\n", ret);
+			goto exit;
 		}
 	}
 exit:
@@ -4052,8 +4065,10 @@ static int __qseecom_update_cmd_buf(void *msg, bool cleanup,
 	}
 	return ret;
 err:
-	if (!IS_ERR_OR_NULL(sg_ptr))
+	if (!IS_ERR_OR_NULL(sg_ptr)) {
 		qseecom_dmabuf_unmap(sg_ptr, attach, dmabuf);
+		MAKE_NULL(sg_ptr, attach, dmabuf);
+	}
 	return -ENOMEM;
 }
 
@@ -4291,8 +4306,10 @@ err:
 				data->client.sec_buf_fd[i].size,
 				data->client.sec_buf_fd[i].vbase,
 				data->client.sec_buf_fd[i].pbase);
-	if (!IS_ERR_OR_NULL(sg_ptr))
+	if (!IS_ERR_OR_NULL(sg_ptr)) {
 		qseecom_dmabuf_unmap(sg_ptr, attach, dmabuf);
+		MAKE_NULL(sg_ptr, attach, dmabuf);
+	}
 	return -ENOMEM;
 }
 
@@ -5852,8 +5869,10 @@ exit_register_bus_bandwidth_needs:
 	}
 
 exit_cpu_restore:
-	if (dmabuf)
+	if (dmabuf) {
 		qseecom_vaddr_unmap(va, sgt, attach, dmabuf);
+		MAKE_NULL(sgt, attach, dmabuf);
+	}
 	return ret;
 }
 
@@ -7104,8 +7123,10 @@ clean:
 	}
 	return ret;
 err:
-	if (!IS_ERR_OR_NULL(sg_ptr))
+	if (!IS_ERR_OR_NULL(sg_ptr)) {
 		qseecom_dmabuf_unmap(sg_ptr, attach, dmabuf);
+		MAKE_NULL(sg_ptr, attach, dmabuf);
+	}
 	return -ENOMEM;
 }
 
@@ -8300,10 +8321,13 @@ static int qseecom_release(struct inode *inode, struct file *file)
 			break;
 		case QSEECOM_SECURE_SERVICE:
 		case QSEECOM_GENERIC:
-			if (data->client.dmabuf)
+			if (data->client.dmabuf) {
 				qseecom_vaddr_unmap(data->client.sb_virt,
 					data->client.sgt, data->client.attach,
 					data->client.dmabuf);
+				MAKE_NULL(data->client.sgt, data->client.attach,
+					data->client.dmabuf);
+			}
 			break;
 		case QSEECOM_UNAVAILABLE_CLIENT_APP:
 			break;
@@ -9267,6 +9291,15 @@ static int qseecom_init_dev(struct platform_device *pdev)
 		goto exit_del_cdev;
 	}
 
+	if (!qseecom.dev->dma_parms) {
+		qseecom.dev->dma_parms =
+			kzalloc(sizeof(*qseecom.dev->dma_parms), GFP_KERNEL);
+		if (!qseecom.dev->dma_parms) {
+			rc = -ENOMEM;
+			goto exit_del_cdev;
+		}
+	}
+	dma_set_max_seg_size(qseecom.dev, DMA_BIT_MASK(32));
 	return 0;
 
 exit_del_cdev:
@@ -9283,6 +9316,8 @@ exit_unreg_chrdev_region:
 
 static void qseecom_deinit_dev(void)
 {
+	kfree(qseecom.dev->dma_parms);
+	qseecom.dev->dma_parms = NULL;
 	cdev_del(&qseecom.cdev);
 	device_destroy(qseecom.driver_class, qseecom.qseecom_device_no);
 	class_destroy(qseecom.driver_class);

@@ -1336,4 +1336,5 @@ config TOUCHSCREEN_SYNAPTICS_DSX
 	  module will be called synaptics_dsx.
 
 source "drivers/input/touchscreen/synaptics_dsx/Kconfig"
+source "drivers/input/touchscreen/focaltech_touch/Kconfig"
 endif
