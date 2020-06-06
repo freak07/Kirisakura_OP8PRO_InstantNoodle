@@ -18,7 +18,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="-Kirisakura-InstantNoodle_6"
+CONFIG_LOCALVERSION="-Kirisakura-InstantNoodle_alpha1"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_DEFAULT_HOSTNAME="(none)"
@@ -6145,9 +6145,13 @@ CONFIG_ARCH_ONEPLUS8PRO=y
 
 CONFIG_QCA_CLD_WLAN=y
 
-# CleanSlate
+# VDSO 32
+#CONFIG_COMPAT_VDSO=y
+#CONFIG_KUSER_HELPERS is not set
+#CONFIG_CROSS_COMPILE_ARM32=""
+
+# CleanSlate Features
 CONFIG_UCI=y
 CONFIG_UCI_NOTIFICATIONS=y
 CONFIG_UCI_NOTIFICATIONS_SCREEN_CALLBACKS=y
-
 CONFIG_DYNAMIC_STUNE_BOOST=y                                                                                                                                                                                                                                        
