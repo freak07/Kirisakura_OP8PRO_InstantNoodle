@@ -511,7 +511,8 @@ next_msdu:
 						   mac_id,
 						   bm_action)
 						   != QDF_STATUS_SUCCESS)
-			dp_err_rl("monitor link desc return failed");
+			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+				  "dp_rx_monitor_link_desc_return failed");
 
 		p_last_buf_addr_info = p_buf_addr_info;
 

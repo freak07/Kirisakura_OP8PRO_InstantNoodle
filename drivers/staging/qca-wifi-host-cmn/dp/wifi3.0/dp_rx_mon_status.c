@@ -797,7 +797,9 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, uint32_t mac_id,
 
 			rx_desc_pool = &soc->rx_desc_status[mac_id];
 
-			dp_info_rl("fail to allocate or map qdf_nbuf");
+			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+				"%s: fail to allocate or map qdf_nbuf",
+				__func__);
 			dp_rx_add_to_free_desc_list(&desc_list,
 						&tail, rx_desc);
 			dp_rx_add_desc_list_to_free_list(soc, &desc_list,

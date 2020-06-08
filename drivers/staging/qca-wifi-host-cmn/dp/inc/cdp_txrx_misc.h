@@ -714,8 +714,27 @@ cdp_txrx_ext_stats_request(ol_txrx_soc_handle soc, struct cdp_pdev *pdev,
  *
  * return: none
  */
+static inline void
+cdp_request_rx_hw_stats(ol_txrx_soc_handle soc, struct cdp_vdev *vdev)
+{
+	if (!soc || !soc->ops || !soc->ops->misc_ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance:", __func__);
+		return;
+	}
+
+	if (soc->ops->misc_ops->request_rx_hw_stats)
+		soc->ops->misc_ops->request_rx_hw_stats(soc, vdev);
+}
+
+/**
+ * cdp_wait_for_ext_rx_stats(): wait for reo command status for stats
+ * @soc: soc handle
+ *
+ * return: status
+ */
 static inline QDF_STATUS
-cdp_request_rx_hw_stats(ol_txrx_soc_handle soc, uint8_t vdev_id)
+cdp_wait_for_ext_rx_stats(ol_txrx_soc_handle soc)
 {
 	if (!soc || !soc->ops || !soc->ops->misc_ops) {
 		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
@@ -723,9 +742,10 @@ cdp_request_rx_hw_stats(ol_txrx_soc_handle soc, uint8_t vdev_id)
 		return QDF_STATUS_E_INVAL;
 	}
 
-	if (soc->ops->misc_ops->request_rx_hw_stats)
-		return soc->ops->misc_ops->request_rx_hw_stats(soc, vdev_id);
+	if (soc->ops->misc_ops->wait_for_ext_rx_stats)
+		return soc->ops->misc_ops->wait_for_ext_rx_stats(soc);
 
 	return QDF_STATUS_SUCCESS;
 }
+
 #endif /* _CDP_TXRX_MISC_H_ */

@@ -395,11 +395,6 @@ struct cdp_cmn_ops {
 	void  (*set_pn_check)(struct cdp_vdev *vdev,
 		struct cdp_peer *peer_handle, enum cdp_sec_type sec_type,
 		 uint32_t *rx_pn);
-	void  (*set_key_sec_type)(struct cdp_vdev *vdev,
-				  struct cdp_peer *peer_handle,
-				  enum cdp_sec_type sec_type,
-				  bool is_unicast);
-
 	QDF_STATUS (*update_config_parameters)(struct cdp_soc *psoc,
 			struct cdp_config_params *params);
 
@@ -1050,8 +1045,9 @@ struct cdp_misc_ops {
 					       uint32_t low_th);
 	QDF_STATUS (*txrx_ext_stats_request)(struct cdp_pdev *pdev,
 					     struct cdp_txrx_ext_stats *req);
-	QDF_STATUS (*request_rx_hw_stats)(struct cdp_soc_t *soc_hdl,
-					  uint8_t vdev_id);
+	void (*request_rx_hw_stats)(struct cdp_soc_t *soc_hdl,
+				    struct cdp_vdev *vdev);
+	QDF_STATUS (*wait_for_ext_rx_stats)(struct cdp_soc_t *soc_hdl);
 };
 
 /**
@@ -1249,16 +1245,10 @@ struct cdp_ipa_ops {
  * struct cdp_bus_ops - mcl bus suspend/resume ops
  * @bus_suspend:
  * @bus_resume:
- * @process_wow_ack_rsp: handler for wow ack response
- * @process_target_suspend_req: handler for target suspend request
  */
 struct cdp_bus_ops {
 	QDF_STATUS (*bus_suspend)(struct cdp_pdev *opaque_pdev);
 	QDF_STATUS (*bus_resume)(struct cdp_pdev *opaque_pdev);
-	void (*process_wow_ack_rsp)(struct cdp_soc_t *soc_hdl,
-				    struct cdp_pdev *opaque_pdev);
-	void (*process_target_suspend_req)(struct cdp_soc_t *soc_hdl,
-					   struct cdp_pdev *opaque_pdev);
 };
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -204,7 +204,7 @@ enum policy_mgr_conc_next_action policy_mgr_need_opportunistic_upgrade(
 	}
 
 	if (policy_mgr_is_hw_dbs_capable(psoc) == false) {
-		policy_mgr_rl_debug("driver isn't dbs capable, no further action needed");
+		policy_mgr_err("driver isn't dbs capable, no further action needed");
 		goto exit;
 	}
 
@@ -904,7 +904,7 @@ QDF_STATUS policy_mgr_current_connections_update(struct wlan_objmgr_psoc *psoc,
 	QDF_STATUS status;
 
 	if (!policy_mgr_is_hw_dbs_capable(psoc)) {
-		policy_mgr_rl_debug("driver isn't dbs capable, no further action needed");
+		policy_mgr_err("driver isn't dbs capable, no further action needed");
 		return QDF_STATUS_E_NOSUPPORT;
 	}
 
@@ -972,25 +972,25 @@ policy_mgr_validate_dbs_switch(struct wlan_objmgr_psoc *psoc,
 	 */
 	if (policy_mgr_is_2x2_5G_1x1_2G_dbs_capable(psoc) ||
 	    policy_mgr_is_2x2_2G_1x1_5G_dbs_capable(psoc)) {
-		policy_mgr_debug("curr dbs action %d new action %d",
-				 hw_mode.action_type, action);
+		policy_mgr_info("curr dbs action %d new action %d",
+				hw_mode.action_type, action);
 		if (hw_mode.action_type == PM_DBS1 &&
 		    ((action == PM_DBS1 ||
 		    action == PM_DBS1_DOWNGRADE))) {
-			policy_mgr_debug("driver is already in DBS_5G_2x2_24G_1x1 (%d), no further action %d needed",
-					 hw_mode.action_type, action);
+			policy_mgr_err("driver is already in DBS_5G_2x2_24G_1x1 (%d), no further action %d needed",
+				       hw_mode.action_type, action);
 			return QDF_STATUS_E_ALREADY;
 		} else if (hw_mode.action_type == PM_DBS2 &&
 			   ((action == PM_DBS2 ||
 			   action == PM_DBS2_DOWNGRADE))) {
-			policy_mgr_debug("driver is already in DBS_24G_2x2_5G_1x1 (%d), no further action %d needed",
-					 hw_mode.action_type, action);
+			policy_mgr_err("driver is already in DBS_24G_2x2_5G_1x1 (%d), no further action %d needed",
+				       hw_mode.action_type, action);
 			return QDF_STATUS_E_ALREADY;
 		}
 	} else if ((action == PM_DBS_DOWNGRADE) || (action == PM_DBS) ||
 		   (action == PM_DBS_UPGRADE)) {
-		policy_mgr_debug("driver is already in %s mode, no further action needed",
-				 (hw_mode.dbs_cap) ? "dbs" : "non dbs");
+		policy_mgr_err("driver is already in %s mode, no further action needed",
+			       (hw_mode.dbs_cap) ? "dbs" : "non dbs");
 		return QDF_STATUS_E_ALREADY;
 	}
 	return QDF_STATUS_SUCCESS;
@@ -1033,7 +1033,7 @@ QDF_STATUS policy_mgr_next_actions(
 	enum policy_mgr_conc_next_action next_action;
 
 	if (policy_mgr_is_hw_dbs_capable(psoc) == false) {
-		policy_mgr_rl_debug("driver isn't dbs capable, no further action needed");
+		policy_mgr_err("driver isn't dbs capable, no further action needed");
 		return QDF_STATUS_E_NOSUPPORT;
 	}
 	status = policy_mgr_validate_unsupported_action(psoc, action);
@@ -1295,8 +1295,10 @@ bool policy_mgr_is_safe_channel(struct wlan_objmgr_psoc *psoc,
 	}
 
 
-	if (pm_ctx->unsafe_channel_count == 0)
+	if (pm_ctx->unsafe_channel_count == 0) {
+		policy_mgr_debug("There are no unsafe channels");
 		return is_safe;
+	}
 
 	for (j = 0; j < pm_ctx->unsafe_channel_count; j++) {
 		if (channel == pm_ctx->unsafe_channel_list[j]) {
@@ -1660,8 +1662,8 @@ static void __policy_mgr_check_sta_ap_concurrent_ch_intf(void *data)
 	mcc_to_scc_switch =
 		policy_mgr_get_mcc_to_scc_switch_mode(psoc);
 
-	policy_mgr_debug("Concurrent open sessions running: %d",
-			 policy_mgr_concurrent_open_sessions_running(psoc));
+	policy_mgr_info("Concurrent open sessions running: %d",
+		policy_mgr_concurrent_open_sessions_running(psoc));
 
 	if (!policy_mgr_is_sap_go_existed(psoc))
 		goto end;
@@ -1706,8 +1708,8 @@ static void __policy_mgr_check_sta_ap_concurrent_ch_intf(void *data)
 					(psoc,
 					vdev_id[i], &channel, &sec_ch);
 			if (status == QDF_STATUS_SUCCESS) {
-				policy_mgr_debug("SAP restarts due to MCC->SCC switch, old chan:%d new chan: %d",
-						 operating_channel[i], channel);
+				policy_mgr_info("SAP restarts due to MCC->SCC switch, old chan :%d new chan: %d"
+					, operating_channel[i], channel);
 				break;
 			}
 		}
@@ -1877,7 +1879,7 @@ void policy_mgr_check_concurrent_intf_and_restart_sap(
 	 * capability change.
 	 * If sta exist, sap/p2p go may need switch channel to force scc
 	 */
-	bool sta_check = false, gc_check = false;
+	bool sta_check;
 
 	pm_ctx = policy_mgr_get_context(psoc);
 	if (!pm_ctx) {
@@ -1925,20 +1927,10 @@ void policy_mgr_check_concurrent_intf_and_restart_sap(
 	sta_check = !cc_count ||
 		    policy_mgr_valid_sta_channel_check(psoc, operating_channel[0]);
 
-	cc_count = 0;
-	cc_count = policy_mgr_get_mode_specific_conn_info(
-				psoc, &operating_channel[cc_count],
-				&vdev_id[cc_count], PM_P2P_CLIENT_MODE);
-	if (!cc_count)
-		policy_mgr_debug("Could not get GC operating channel&vdevid");
-
-	gc_check = !!cc_count;
-	policy_mgr_debug("gc_check: %d", gc_check);
-
 	mcc_to_scc_switch =
 		policy_mgr_get_mcc_to_scc_switch_mode(psoc);
-	policy_mgr_debug("MCC to SCC switch: %d chan: %d",
-			 mcc_to_scc_switch, operating_channel[0]);
+	policy_mgr_info("MCC to SCC switch: %d chan: %d",
+			mcc_to_scc_switch, operating_channel[0]);
 sap_restart:
 	/*
 	 * If sta_sap_scc_on_dfs_chan is true then standalone SAP is not
@@ -1951,10 +1943,10 @@ sap_restart:
 	 */
 	if (restart_sap ||
 	    ((mcc_to_scc_switch != QDF_MCC_TO_SCC_SWITCH_DISABLE) &&
-	    (sta_check || gc_check))) {
+	    sta_check)) {
 		if (pm_ctx->sta_ap_intf_check_work_info) {
 			qdf_sched_work(0, &pm_ctx->sta_ap_intf_check_work);
-			policy_mgr_debug(
+			policy_mgr_info(
 				"Checking for Concurrent Change interference");
 		}
 	}
@@ -2196,7 +2188,7 @@ QDF_STATUS policy_mgr_set_hw_mode_on_channel_switch(
 	enum policy_mgr_conc_next_action action;
 
 	if (!policy_mgr_is_hw_dbs_capable(psoc)) {
-		policy_mgr_rl_debug("PM/DBS is disabled");
+		policy_mgr_err("PM/DBS is disabled");
 		return status;
 	}
 
@@ -2226,7 +2218,7 @@ QDF_STATUS policy_mgr_set_hw_mode_on_channel_switch(
 
 	/* For DBS, we want to move right away to DBS mode */
 	status = policy_mgr_next_actions(psoc, session_id, action,
-			POLICY_MGR_UPDATE_REASON_AFTER_CHANNEL_SWITCH);
+			POLICY_MGR_UPDATE_REASON_CHANNEL_SWITCH);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		policy_mgr_err("no set hw mode command was issued");
 		goto done;
@@ -2255,8 +2247,10 @@ QDF_STATUS policy_mgr_check_and_set_hw_mode_for_channel_switch(
 	if (!policy_mgr_is_hw_dbs_capable(psoc) ||
 	    (!policy_mgr_is_hw_dbs_2x2_capable(psoc) &&
 	    !policy_mgr_is_hw_dbs_required_for_band(
-					psoc, HW_MODE_MAC_BAND_2G)))
+					psoc, HW_MODE_MAC_BAND_2G))) {
+		policy_mgr_err("2x2 DBS is not enabled");
 		return QDF_STATUS_E_NOSUPPORT;
+	}
 
 	/*
 	 * Stop opportunistic timer as current connection info will change once
@@ -2266,12 +2260,14 @@ QDF_STATUS policy_mgr_check_and_set_hw_mode_for_channel_switch(
 	policy_mgr_stop_opportunistic_timer(psoc);
 
 	if (policy_mgr_is_current_hwmode_dbs(psoc)) {
-		policy_mgr_debug("Already in DBS mode");
+		policy_mgr_err("Already in DBS mode");
 		return QDF_STATUS_E_ALREADY;
 	}
 
-	if (!WLAN_CHAN_IS_2GHZ(chan))
+	if (!WLAN_CHAN_IS_2GHZ(chan)) {
+		policy_mgr_err("DBS is not required for 5Ghz chan");
 		return QDF_STATUS_E_NOSUPPORT;
+	}
 
 	qdf_mutex_acquire(&pm_ctx->qdf_conc_list_lock);
 	/*
@@ -2453,21 +2449,21 @@ enum policy_mgr_hw_mode_change policy_mgr_get_hw_mode_change_from_hw_mode_index(
 	}
 
 	if (hw_mode.dbs_cap) {
-		policy_mgr_debug("DBS is requested with HW (%d)",
-				 hw_mode_index);
+		policy_mgr_info("DBS is requested with HW (%d)",
+		hw_mode_index);
 		value = POLICY_MGR_DBS_IN_PROGRESS;
 		goto ret_value;
 	}
 
 	if (hw_mode.sbs_cap) {
-		policy_mgr_debug("SBS is requested with HW (%d)",
-				 hw_mode_index);
+		policy_mgr_info("SBS is requested with HW (%d)",
+		hw_mode_index);
 		value = POLICY_MGR_SBS_IN_PROGRESS;
 		goto ret_value;
 	}
 
 	value = POLICY_MGR_SMM_IN_PROGRESS;
-	policy_mgr_debug("SMM is requested with HW (%d)", hw_mode_index);
+	policy_mgr_info("SMM is requested with HW (%d)", hw_mode_index);
 
 ret_value:
 	return value;

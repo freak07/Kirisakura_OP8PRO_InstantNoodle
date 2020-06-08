@@ -136,7 +136,8 @@ const struct reg_dmn_op_class_map_t *reg_get_class_from_country(uint8_t
 {
 	const struct reg_dmn_op_class_map_t *class = NULL;
 
-	reg_debug_rl("Country %c%c 0x%x", country[0], country[1], country[2]);
+	qdf_debug("Country %c%c 0x%x",
+		  country[0], country[1], country[2]);
 
 	switch (country[2]) {
 	case OP_CLASS_US:

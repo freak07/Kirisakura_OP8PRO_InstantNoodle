@@ -63,7 +63,9 @@ QDF_STATUS dsc_vdev_create(struct dsc_psoc *psoc, struct dsc_vdev **out_vdev)
 {
 	QDF_STATUS status;
 
+	dsc_enter();
 	status =  __dsc_vdev_create(psoc, out_vdev);
+	dsc_exit();
 
 	return status;
 }
@@ -100,7 +102,9 @@ static void __dsc_vdev_destroy(struct dsc_vdev **out_vdev)
 
 void dsc_vdev_destroy(struct dsc_vdev **out_vdev)
 {
+	dsc_enter();
 	__dsc_vdev_destroy(out_vdev);
+	dsc_exit();
 }
 
 #define __dsc_vdev_can_op(vdev) __dsc_vdev_can_trans(vdev)
@@ -116,10 +120,9 @@ void dsc_vdev_destroy(struct dsc_vdev **out_vdev)
  * should be rejected and not queued in the DSC queue. Return QDF_STATUS_E_INVAL
  * in this case.
  *
- * If there are any psoc transition taking place because of SSR, then vdev
- * trans/op should be rejected and queued in the DSC queue so that it may be
- * resumed after the current trans/op is completed. return QDF_STATUS_E_AGAIN
- * in this case.
+ * If there are any psoc transition taking place because of ssr or driver
+ * unload, then the vdev trans/ops should be rejected and not queued in the
+ * DSC queue. Return QDF_STATUS_E_INVAL in this case.
  *
  * If there is a psoc transition taking place because of psoc idle shutdown,
  * then the vdev trans/ops should be rejected and queued in the DSC queue so
@@ -138,17 +141,12 @@ static QDF_STATUS __dsc_vdev_can_trans(struct dsc_vdev *vdev)
 	if (__dsc_trans_active_or_queued(&vdev->psoc->driver->trans))
 		return QDF_STATUS_E_INVAL;
 
-	if (qdf_is_recovering())
-		return QDF_STATUS_E_AGAIN;
-
 	if (__dsc_trans_active_or_queued(&vdev->psoc->trans)) {
 		/* psoc idle shutdown(wifi off) needs to be added in DSC queue
 		 * to avoid wifi on failure while previous psoc idle shutdown
-		 * is in progress and wifi is turned on. And Wifi On also needs
-		 * to be added to the queue so that it waits for SSR to
-		 * complete.
+		 * is in progress and wifi is turned on.
 		 */
-		if (qdf_is_driver_unloading())
+		if (qdf_is_driver_unloading() || qdf_is_recovering())
 			return QDF_STATUS_E_INVAL;
 		else
 			return QDF_STATUS_E_AGAIN;
@@ -196,8 +194,7 @@ QDF_STATUS dsc_vdev_trans_start(struct dsc_vdev *vdev, const char *desc)
 
 	dsc_enter_str(desc);
 	status = __dsc_vdev_trans_start(vdev, desc);
-	if (QDF_IS_STATUS_ERROR(status))
-		dsc_exit_status(status);
+	dsc_exit_status(status);
 
 	return status;
 }
@@ -241,8 +238,7 @@ QDF_STATUS dsc_vdev_trans_start_wait(struct dsc_vdev *vdev, const char *desc)
 
 	dsc_enter_str(desc);
 	status = __dsc_vdev_trans_start_wait(vdev, desc);
-	if (QDF_IS_STATUS_ERROR(status))
-		dsc_exit_status(status);
+	dsc_exit_status(status);
 
 	return status;
 }
@@ -273,7 +269,9 @@ static void __dsc_vdev_trans_stop(struct dsc_vdev *vdev)
 
 void dsc_vdev_trans_stop(struct dsc_vdev *vdev)
 {
+	dsc_enter();
 	__dsc_vdev_trans_stop(vdev);
+	dsc_exit();
 }
 
 static void __dsc_vdev_assert_trans_protected(struct dsc_vdev *vdev)
@@ -290,7 +288,9 @@ static void __dsc_vdev_assert_trans_protected(struct dsc_vdev *vdev)
 
 void dsc_vdev_assert_trans_protected(struct dsc_vdev *vdev)
 {
+	dsc_enter();
 	__dsc_vdev_assert_trans_protected(vdev);
+	dsc_exit();
 }
 
 static QDF_STATUS __dsc_vdev_op_start(struct dsc_vdev *vdev, const char *func)
@@ -373,6 +373,8 @@ static void __dsc_vdev_wait_for_ops(struct dsc_vdev *vdev)
 
 void dsc_vdev_wait_for_ops(struct dsc_vdev *vdev)
 {
+	dsc_enter();
 	__dsc_vdev_wait_for_ops(vdev);
+	dsc_exit();
 }
 

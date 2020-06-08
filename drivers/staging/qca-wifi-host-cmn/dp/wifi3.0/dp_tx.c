@@ -1398,46 +1398,37 @@ static void dp_tx_update_tdls_flags(struct dp_tx_desc_s *tx_desc)
 
 /**
  * dp_non_std_tx_comp_free_buff() - Free the non std tx packet buffer
- * @soc: DP soc handdle
  * @tx_desc: TX descriptor
  * @vdev: datapath vdev handle
  *
  * Return: None
  */
-static void dp_non_std_tx_comp_free_buff(struct dp_soc *soc,
-					 struct dp_tx_desc_s *tx_desc,
+static void dp_non_std_tx_comp_free_buff(struct dp_tx_desc_s *tx_desc,
 					 struct dp_vdev *vdev)
 {
 	struct hal_tx_completion_status ts = {0};
 	qdf_nbuf_t nbuf = tx_desc->nbuf;
 
 	if (qdf_unlikely(!vdev)) {
-		dp_err_rl("vdev is null!");
-		goto error;
+		dp_err("vdev is null!");
+		return;
 	}
 
 	hal_tx_comp_get_status(&tx_desc->comp, &ts, vdev->pdev->soc->hal_soc);
 	if (vdev->tx_non_std_data_callback.func) {
-		qdf_nbuf_set_next(nbuf, NULL);
+		qdf_nbuf_set_next(tx_desc->nbuf, NULL);
 		vdev->tx_non_std_data_callback.func(
 				vdev->tx_non_std_data_callback.ctxt,
 				nbuf, ts.status);
 		return;
-	} else {
-		dp_err_rl("callback func is null");
 	}
-
-error:
-	qdf_nbuf_unmap(soc->osdev, nbuf, QDF_DMA_TO_DEVICE);
-	qdf_nbuf_free(nbuf);
 }
 #else
 static inline void dp_tx_update_tdls_flags(struct dp_tx_desc_s *tx_desc)
 {
 }
 
-static inline void dp_non_std_tx_comp_free_buff(struct dp_soc *soc,
-						struct dp_tx_desc_s *tx_desc,
+static inline void dp_non_std_tx_comp_free_buff(struct dp_tx_desc_s *tx_desc,
 						struct dp_vdev *vdev)
 {
 }
@@ -1543,11 +1534,9 @@ static qdf_nbuf_t dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	nbuf = NULL;
 
 fail_return:
-	if (hif_pm_runtime_get(soc->hif_handle,
-			       RTPM_ID_DW_TX_HW_ENQUEUE) == 0) {
+	if (hif_pm_runtime_get(soc->hif_handle) == 0) {
 		hal_srng_access_end(soc->hal_soc, hal_srng);
-		hif_pm_runtime_put(soc->hif_handle,
-				   RTPM_ID_DW_TX_HW_ENQUEUE);
+		hif_pm_runtime_put(soc->hif_handle);
 	} else {
 		hal_srng_access_end_reap(soc->hal_soc, hal_srng);
 		hal_srng_set_event(hal_srng, HAL_SRNG_FLUSH_EVENT);
@@ -1718,11 +1707,9 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	nbuf = NULL;
 
 done:
-	if (hif_pm_runtime_get(soc->hif_handle,
-			       RTPM_ID_DW_TX_HW_ENQUEUE) == 0) {
+	if (hif_pm_runtime_get(soc->hif_handle) == 0) {
 		hal_srng_access_end(soc->hal_soc, hal_srng);
-		hif_pm_runtime_put(soc->hif_handle,
-				   RTPM_ID_DW_TX_HW_ENQUEUE);
+		hif_pm_runtime_put(soc->hif_handle);
 	} else {
 		hal_srng_access_end_reap(soc->hal_soc, hal_srng);
 		hal_srng_set_event(hal_srng, HAL_SRNG_FLUSH_EVENT);
@@ -2615,7 +2602,7 @@ static inline void dp_tx_comp_free_buf(struct dp_soc *soc,
 
 	/* If it is TDLS mgmt, don't unmap or free the frame */
 	if (desc->flags & DP_TX_DESC_FLAG_TDLS_FRAME)
-		return dp_non_std_tx_comp_free_buff(soc, desc, vdev);
+		return dp_non_std_tx_comp_free_buff(desc, vdev);
 
 	/* 0 : MSDU buffer, 1 : MLE */
 	if (desc->msdu_ext_desc) {
@@ -2744,23 +2731,6 @@ static void dp_tx_compute_delay(struct dp_vdev *vdev,
 	vdev->prev_tx_enq_tstamp = timestamp_ingress;
 }
 
-#ifdef DISABLE_DP_STATS
-static
-inline void dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_peer *peer)
-{
-}
-#else
-static
-inline void dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_peer *peer)
-{
-	enum qdf_proto_subtype subtype = QDF_PROTO_INVALID;
-
-	DPTRACE(qdf_dp_track_noack_check(nbuf, &subtype));
-	if (subtype != QDF_PROTO_INVALID)
-		DP_STATS_INC(peer, tx.no_ack_count[subtype], 1);
-}
-#endif
-
 /**
  * dp_tx_update_peer_stats() - Update peer stats from Tx completion indications
  *				per wbm ring
@@ -2829,7 +2799,6 @@ dp_tx_update_peer_stats(struct dp_tx_desc_s *tx_desc,
 
 	if (ts->status != HAL_TX_TQM_RR_FRAME_ACKED) {
 		tid_stats->comp_fail_cnt++;
-		dp_update_no_ack_stats(tx_desc->nbuf, peer);
 		return;
 	}
 

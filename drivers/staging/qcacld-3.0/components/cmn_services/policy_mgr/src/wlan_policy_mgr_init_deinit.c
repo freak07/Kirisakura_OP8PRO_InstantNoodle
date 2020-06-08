@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -366,7 +366,7 @@ QDF_STATUS policy_mgr_psoc_close(struct wlan_objmgr_psoc *psoc)
 	if (pm_ctx->hw_mode.hw_mode_list) {
 		qdf_mem_free(pm_ctx->hw_mode.hw_mode_list);
 		pm_ctx->hw_mode.hw_mode_list = NULL;
-		policy_mgr_debug("HW list is freed");
+		policy_mgr_info("HW list is freed");
 	}
 
 	if (pm_ctx->sta_ap_intf_check_work_info) {
@@ -665,8 +665,6 @@ QDF_STATUS policy_mgr_register_hdd_cb(struct wlan_objmgr_psoc *psoc,
 		hdd_cbacks->hdd_wapi_security_sta_exist;
 	pm_ctx->hdd_cbacks.hdd_is_chan_switch_in_progress =
 		hdd_cbacks->hdd_is_chan_switch_in_progress;
-	pm_ctx->hdd_cbacks.wlan_hdd_indicate_active_ndp_cnt =
-		hdd_cbacks->wlan_hdd_indicate_active_ndp_cnt;
 
 	return QDF_STATUS_SUCCESS;
 }

@@ -1337,8 +1337,9 @@ int wma_csa_offload_handler(void *handle, uint8_t *event, uint32_t len)
 
 	csa_offload_event->ies_present_flag = csa_event->ies_present_flag;
 
-	WMA_LOGD("CSA: BSSID %pM chan %d flag 0x%x width = %d freq1 = %d freq2 = %d op class = %d",
-		 csa_offload_event->bssId, csa_offload_event->channel,
+	WMA_LOGD("CSA: New Channel = %d BSSID:%pM",
+		 csa_offload_event->channel, csa_offload_event->bssId);
+	WMA_LOGD("CSA: IEs Present Flag = 0x%x new ch width = %d ch center freq1 = %d ch center freq2 = %d new op class = %d",
 		 csa_event->ies_present_flag,
 		 csa_offload_event->new_ch_width,
 		 csa_offload_event->new_ch_freq_seg1,
@@ -3707,6 +3708,13 @@ QDF_STATUS wma_process_del_periodic_tx_ptrn_ind(WMA_HANDLE handle,
 }
 
 #ifdef WLAN_FEATURE_STATS_EXT
+/**
+ * wma_stats_ext_req() - request ext stats from fw
+ * @wma_ptr: wma handle
+ * @preq: stats ext params
+ *
+ * Return: QDF status
+ */
 QDF_STATUS wma_stats_ext_req(void *wma_ptr, tpStatsExtRequest preq)
 {
 	tp_wma_handle wma = (tp_wma_handle) wma_ptr;
@@ -5395,6 +5403,8 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 	struct lim_channel_status *channel_status;
 	bool snr_monitor_enabled;
 
+	WMA_LOGD("%s: Enter", __func__);
+
 	if (wma && wma->cds_context)
 		mac = (struct mac_context *)cds_get_context(QDF_MODULE_ID_PE);
 
@@ -5404,6 +5414,7 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 	}
 
 	snr_monitor_enabled = wlan_scan_is_snr_monitor_enabled(mac->psoc);
+	WMA_LOGD("%s: monitor:%d", __func__, snr_monitor_enabled);
 	if (snr_monitor_enabled && mac->chan_info_cb) {
 		param_buf =
 			(WMI_CHAN_INFO_EVENTID_param_tlvs *)event_buf;
@@ -5438,10 +5449,14 @@ int wma_chan_info_event_handler(void *handle, uint8_t *event_buf,
 		channel_status = qdf_mem_malloc(sizeof(*channel_status));
 		if (!channel_status)
 			return -ENOMEM;
-		wma_debug("freq %d nf %d rxcnt %u cyccnt %u tx_r %d tx_t %d",
-			  event->freq, event->noise_floor,
-			  event->rx_clear_count, event->cycle_count,
-			  event->chan_tx_pwr_range, event->chan_tx_pwr_tp);
+
+		WMA_LOGD(FL("freq=%d nf=%d rxcnt=%u cyccnt=%u tx_r=%d tx_t=%d"),
+			 event->freq,
+			 event->noise_floor,
+			 event->rx_clear_count,
+			 event->cycle_count,
+			 event->chan_tx_pwr_range,
+			 event->chan_tx_pwr_tp);
 
 		channel_status->channelfreq = event->freq;
 		channel_status->noise_floor = event->noise_floor;
@@ -5714,7 +5729,7 @@ static void wma_send_set_key_rsp(uint8_t session_id, bool pairwise,
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_WMA_ID);
 	if (!crypto_key) {
-		wma_debug("crypto_key not found");
+		wma_err("crypto_key not found");
 		return;
 	}
 

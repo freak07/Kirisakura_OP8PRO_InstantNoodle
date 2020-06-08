@@ -78,6 +78,8 @@ static QDF_STATUS pmo_core_cache_ns_in_vdev_priv(
 	struct pmo_ns_offload_params request;
 	struct wlan_objmgr_peer *peer;
 
+	pmo_enter();
+
 	vdev_ctx = pmo_vdev_get_priv(vdev);
 
 	qdf_mem_zero(&request, sizeof(request));
@@ -112,6 +114,7 @@ static QDF_STATUS pmo_core_cache_ns_in_vdev_priv(
 		sizeof(vdev_ctx->vdev_ns_req));
 	qdf_spin_unlock_bh(&vdev_ctx->pmo_vdev_lock);
 out:
+	pmo_exit();
 
 	return status;
 }
@@ -143,6 +146,8 @@ static QDF_STATUS pmo_core_do_enable_ns_offload(struct wlan_objmgr_vdev *vdev,
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct pmo_psoc_priv_obj *psoc_ctx;
 	struct pmo_vdev_priv_obj *vdev_ctx;
+
+	pmo_enter();
 
 	vdev_ctx = pmo_vdev_get_priv(vdev);
 
@@ -179,6 +184,7 @@ static QDF_STATUS pmo_core_do_enable_ns_offload(struct wlan_objmgr_vdev *vdev,
 		break;
 	}
 out:
+	pmo_exit();
 
 	return status;
 }
@@ -259,6 +265,7 @@ QDF_STATUS pmo_core_cache_ns_offload_req(
 	QDF_STATUS status;
 	struct wlan_objmgr_vdev *vdev;
 
+	pmo_enter();
 	if (!ns_req) {
 		pmo_err("ns is NULL");
 		status = QDF_STATUS_E_INVAL;
@@ -296,6 +303,7 @@ QDF_STATUS pmo_core_cache_ns_offload_req(
 dec_ref:
 	pmo_vdev_put_ref(vdev);
 out:
+	pmo_exit();
 
 	return status;
 }
@@ -339,6 +347,7 @@ QDF_STATUS pmo_core_enable_ns_offload_in_fwr(struct wlan_objmgr_vdev *vdev,
 	struct pmo_vdev_priv_obj *vdev_ctx;
 	uint8_t vdev_id;
 
+	pmo_enter();
 	if (!vdev) {
 		pmo_err("vdev is NULL");
 		status = QDF_STATUS_E_INVAL;
@@ -386,6 +395,7 @@ skip_ns_dynamic_check:
 dec_ref:
 	pmo_vdev_put_ref(vdev);
 out:
+	pmo_exit();
 
 	return status;
 }
