@@ -94,7 +94,7 @@ static int dynamic_page_pool_add(struct dynamic_page_pool *pool,
 	pool->count++;
 	mutex_unlock(&pool->mutex);
 
-	mod_node_page_state(page_pgdat(page), NR_INDIRECTLY_RECLAIMABLE_BYTES,
+	mod_node_page_state(page_pgdat(page), NR_KERNEL_MISC_RECLAIMABLE,
 			    (1 << (PAGE_SHIFT + pool->order)));
 	return 0;
 }
@@ -115,7 +115,7 @@ static struct page *dynamic_page_pool_remove(struct dynamic_page_pool *pool)
 	pool->count--;
 	list_del(&page->lru);
 	mutex_unlock(&pool->mutex);
-	mod_node_page_state(page_pgdat(page), NR_INDIRECTLY_RECLAIMABLE_BYTES,
+	mod_node_page_state(page_pgdat(page), NR_KERNEL_MISC_RECLAIMABLE,
 			    -(1 << (PAGE_SHIFT + pool->order)));
 	return page;
 }
