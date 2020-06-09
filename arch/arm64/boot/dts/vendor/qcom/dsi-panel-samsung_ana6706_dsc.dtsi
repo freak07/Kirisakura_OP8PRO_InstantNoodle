@@ -477,6 +477,8 @@
 				qcom,mdss-dsc-bit-per-component = <8>;
 				qcom,mdss-dsc-bit-per-pixel = <8>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,partial-update-enabled = "single_roi";
+				qcom,panel-roi-alignment = <540 30 540 30 540 30>;
 			};
 			timing@1 {
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
@@ -900,6 +902,8 @@
 				qcom,mdss-dsc-bit-per-component = <8>;
 				qcom,mdss-dsc-bit-per-pixel = <8>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,partial-update-enabled = "single_roi";
+				qcom,panel-roi-alignment = <540 30 540 30 540 30>;
 			};
 			timing@2 {
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
@@ -1315,6 +1319,8 @@
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <8>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,partial-update-enabled = "single_roi";
+				qcom,panel-roi-alignment = <720 40 720 40 720 40>;
 			};
 			timing@3 {
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
@@ -1731,6 +1737,8 @@
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <10>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,partial-update-enabled = "single_roi";
+				qcom,panel-roi-alignment = <720 40 720 40 720 40>;
 
 			};
 		};
