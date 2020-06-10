@@ -28,7 +28,7 @@ MODULE_LICENSE("GPL");
 #define S2S_PWRKEY_DUR         20
 #if 1
 // 3040x1440
-static int S2S_Y_MAX = 3040;
+static int S2S_Y_MAX = 3168;
 static int S2S_X_MAX = 1440;
 static int S2S_X_LEFT_CORNER_END = 150;
 static int S2S_X_RIGHT_CORNER_START = 1290; // 1440-150
