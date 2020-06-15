@@ -57,6 +57,9 @@ static int sysfs_kf_seq_show(struct seq_file *sf, void *v)
 	 * Invoke show().  Control may reach here via seq file lseek even
 	 * if @ops->show() isn't implemented.
 	 */
+#if 0
+	pr_info("%s kfs stuff %s \n",__func__,sf->file->f_path.dentry->d_name.name);
+#endif
 	if (ops->show) {
 		count = ops->show(kobj, of->kn->priv, buf);
 		if (count < 0)
