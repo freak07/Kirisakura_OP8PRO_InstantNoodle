@@ -526,7 +526,8 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 						snprintf(filename, filename_len, P821_PUBLIC_CHINA_DEFAULT_BDF);
 					break;
 					case 12:
-					cnss_pr_dbg("it is TMO T0 version, begin to load the TMO BDF file");
+					case 25:
+					cnss_pr_dbg("it is TMO or VISIBLE T0 version, begin to load the TMO or VISIBLE BDF file");
 					if (tempstr == 1)
 						snprintf(filename, filename_len, P821_TMO_CHAIN0_ONLY_BDF);
 					else if (tempstr == 2)
@@ -574,7 +575,8 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 						snprintf(filename, filename_len, P821_PUBLIC_CHINA_DEFAULT_BDF);
 					break;
 					case 12:
-					cnss_pr_dbg("it is TMO EVT1 version, begin to load the TMO BDF file");
+					case 25:
+					cnss_pr_dbg("it is TMO or VISIBLE EVT1 version, begin to load the TMO or VISIBLE BDF file");
 					if (tempstr == 1)
 						snprintf(filename, filename_len, P821_TMO_CHAIN0_ONLY_BDF);
 					else if (tempstr == 2)
@@ -622,7 +624,8 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 						snprintf(filename, filename_len, P821_PUBLIC_CHINA_DEFAULT_BDF);
 					break;
 					case 12:
-					cnss_pr_dbg("it is TMO EVT2 version, begin to load the TMO BDF file");
+					case 25:
+					cnss_pr_dbg("it is TMO or VISIBLE EVT2 version, begin to load the TMO or VISIBLE BDF file");
 					if (tempstr == 1)
 						snprintf(filename, filename_len, P821_TMO_CHAIN0_ONLY_BDF);
 					else if (tempstr == 2)
@@ -670,7 +673,8 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 						snprintf(filename, filename_len, P821_PUBLIC_CHINA_DEFAULT_BDF);
 					break;
 					case 12:
-					cnss_pr_dbg("it is TMO DVT version, begin to load the TMO BDF file");
+					case 25:
+					cnss_pr_dbg("it is TMO or VISIBLE DVT version, begin to load the TMO or VISIBLE BDF file");
 					if (tempstr == 1)
 						snprintf(filename, filename_len, P821_TMO_CHAIN0_ONLY_BDF);
 					else if (tempstr == 2)
@@ -718,7 +722,8 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 						snprintf(filename, filename_len, P821_PUBLIC_CHINA_DEFAULT_BDF);
 					break;
 					case 12:
-					cnss_pr_dbg("it is TMO PVT version, begin to load the TMO BDF file");
+					case 25:
+					cnss_pr_dbg("it is TMO or VISIBLE PVT version, begin to load the TMO or VISIBLE BDF file");
 					if (tempstr == 1)
 						snprintf(filename, filename_len, P821_TMO_CHAIN0_ONLY_BDF);
 					else if (tempstr == 2)
