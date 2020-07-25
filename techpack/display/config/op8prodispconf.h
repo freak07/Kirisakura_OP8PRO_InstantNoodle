@@ -19,4 +19,5 @@
 #define CONFIG_DRM_SDE_RSC 1
 
 #define CONFIG_PXLW_IRIS5 1
+#define PXLW_IRIS_DUAL 1
 
