@@ -227,7 +227,6 @@ int cap_capget(struct task_struct *target, kernel_cap_t *effective,
  */
 static inline int cap_inh_is_capped(void)
 {
-
 	/* they are so limited unless the current task has the CAP_SETPCAP
 	 * capability
 	 */
